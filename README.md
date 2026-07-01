@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Factori — app UI scaffold
 
-## Getting Started
+A redesigned, **AI‑native** web app for Factori: the real‑world data & context layer for AI‑powered enterprises. This scaffold expresses the product strategy we aligned on — a **data platform** (catalog · API · MCP · cloud delivery) with a layer of **GeoAI apps** bundled on top — in one unified, dark, compact shell.
 
-First, run the development server:
+> Status: clickable front‑end scaffold with mock data. No backend. The map uses MapLibre GL + free CARTO dark basemap tiles (degrades gracefully offline).
+
+## Run
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+npm run dev        # http://localhost:3000 (or next free port)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## The product, in one line
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Ask anything about places, people, and movement — then act on it inside purpose‑built apps. Data‑savvy buyers drop to raw cuts, API, or MCP at any time.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Information architecture
 
-## Learn More
+Two‑zone left rail + omnipresent ⌘K agent:
 
-To learn more about Next.js, take a look at the following resources:
+- **Ask** (`/`) — agent front door. Three states: **Console → Split → Immersive**. Conversation steers a persistent dark MapLibre canvas; results render as map / ranked table / scorecards with a **layers · controls · data‑provenance** inspector. Provenance links every answer back to the Catalog (the cross‑sell hook).
+- **Apps** (`/apps`) — the GeoAI suite:
+  - **Site Selection** (`/apps/site-selection`) — built deep: candidate scoring, trade areas, cannibalization, score breakdown.
+  - **OOH Planning**, **Audience Builder** — preview shells.
+- **Catalog** (`/catalog`, `/catalog/[id]`) — dataset marketplace + Preview/Export, with "use via API / MCP / cloud delivery".
+- **Lists & Enrich** (`/lists`) · **Activity** (`/activity`)
+- **Developers** (`/developers`) — REST + MCP endpoints, keys · **Billing** (`/billing`) — one wallet (credits + app subscriptions) · **Settings** (`/settings`)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Key decisions (from the brainstorm): business‑user‑first · agent‑orchestrates‑apps · Location Intelligence is the platform layer (folded into Ask), not a 4th app · apps are integrated modules in one shell (subdomains are a deploy detail, not a UX boundary).
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Stack
 
-## Deploy on Vercel
+Next.js 16 (App Router, Turbopack) · React 19 · TypeScript · Tailwind v4 · MapLibre GL · zustand · lucide‑react · Geist.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Structure
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```
+src/
+  app/                     routes (ask = /, apps, catalog, lists, …)
+  components/
+    shell/                 Sidebar · TopBar · CommandMenu · AppShell · Page
+    ask/                   AskSurface · ChatPane · MapCanvas · CanvasOverlay
+    site-selection/        SiteSelectionApp · SiteMap
+    ui/                    button · badge · panel · field (compact primitives)
+  lib/
+    mock/                  agent (scripted) · geo · platform · sites
+    store/                 ask · ui (zustand)
+    nav.ts · format.ts · cn.ts
+```
+
+## Design system
+
+"Cartographic instrument" — cool tinted near‑black (never pure black), one restrained teal accent, hairline borders, compact 13px base, tabular numerals. Tokens live in `src/app/globals.css` (`@theme`). Dark‑only by request.
+
+## What's mocked
+
+The "agent" (`src/lib/mock/agent.ts`) pattern‑matches a query → a realistic result (map features, layers, controls, provenance). All datasets, sites, lists, activity, keys, and usage are seeded mock data. Swap these modules for real APIs/MCP to go live.

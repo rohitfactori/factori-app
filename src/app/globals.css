@@ -1,26 +1,189 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/* ============================================================
+   Factori — "cartographic instrument" design system
+   Cool tinted near-black · one restrained teal accent ·
+   hairline borders · compact, data-dense.
+   ============================================================ */
+
+@theme {
+  /* ---- Surfaces: cool tinted charcoal, never pure black ---- */
+  --color-canvas: oklch(0.166 0.008 196); /* app base */
+  --color-panel: oklch(0.197 0.009 196); /* rails, cards */
+  --color-panel-2: oklch(0.232 0.010 196); /* hover / elevated */
+  --color-panel-3: oklch(0.270 0.011 196); /* active wells */
+  --color-line: oklch(0.283 0.010 196); /* hairline border */
+  --color-line-strong: oklch(0.346 0.013 196); /* dividers, scrollbars */
+
+  /* ---- Ink ---- */
+  --color-ink: oklch(0.954 0.005 190); /* primary text */
+  --color-ink-muted: oklch(0.715 0.013 192); /* secondary */
+  --color-ink-faint: oklch(0.560 0.014 194); /* tertiary / placeholder */
+
+  /* ---- Accent: Factori teal, refined (no neon glow) ---- */
+  --color-accent: oklch(0.815 0.114 184);
+  --color-accent-hover: oklch(0.858 0.116 184);
+  --color-accent-ink: oklch(0.205 0.028 196); /* dark text on teal */
+  --color-accent-dim: oklch(0.405 0.055 188); /* subtle teal lines/fills */
+
+  /* ---- Data-viz categorical (muted for dark) ---- */
+  --color-viz-teal: oklch(0.815 0.114 184);
+  --color-viz-amber: oklch(0.805 0.102 78);
+  --color-viz-violet: oklch(0.730 0.098 292);
+  --color-viz-rose: oklch(0.725 0.112 10);
+  --color-viz-blue: oklch(0.725 0.100 244);
+  --color-viz-green: oklch(0.785 0.110 150);
+
+  /* ---- Status ---- */
+  --color-positive: oklch(0.785 0.110 150);
+  --color-warning: oklch(0.805 0.102 78);
+  --color-negative: oklch(0.690 0.130 18);
+
+  /* solid tints (accent blended into panel) for badges/wells */
+  --color-accent-tint: color-mix(in oklch, var(--color-accent) 16%, var(--color-panel));
+  --color-positive-tint: color-mix(in oklch, var(--color-positive) 15%, var(--color-panel));
+  --color-warning-tint: color-mix(in oklch, var(--color-warning) 15%, var(--color-panel));
+  --color-negative-tint: color-mix(in oklch, var(--color-negative) 16%, var(--color-panel));
+  --color-violet-tint: color-mix(in oklch, var(--color-viz-violet) 16%, var(--color-panel));
+
+  /* ---- Type: Geist, compact scale ---- */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, "SFMono-Regular", monospace;
+
+  --text-2xs: 0.6875rem; /* 11px */
+  --text-2xs--line-height: 0.95rem;
+  --text-xs: 0.75rem; /* 12px */
+  --text-xs--line-height: 1.05rem;
+  --text-sm: 0.8125rem; /* 13px — base UI */
+  --text-sm--line-height: 1.2rem;
+  --text-base: 0.875rem; /* 14px */
+  --text-base--line-height: 1.35rem;
+  --text-lg: 1rem;
+  --text-lg--line-height: 1.45rem;
+  --text-xl: 1.1875rem;
+  --text-xl--line-height: 1.6rem;
+  --text-2xl: 1.5rem;
+  --text-2xl--line-height: 1.85rem;
+  --text-3xl: 2rem;
+  --text-3xl--line-height: 2.3rem;
+
+  /* ---- Radius: soft, rounded ---- */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 11px;
+  --radius-xl: 14px;
+  --radius-2xl: 18px;
+
+  /* ---- Elevation: restrained, no generic drop shadows ---- */
+  --shadow-pop: 0 14px 38px -10px oklch(0 0 0 / 0.72), 0 0 0 1px var(--color-line);
+  --shadow-panel: 0 8px 24px -16px oklch(0 0 0 / 0.7);
+
+  /* motion */
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    color-scheme: dark;
+  }
+
+  * {
+    border-color: var(--color-line);
+    min-width: 0;
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-sm);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background: color-mix(in oklch, var(--color-accent) 28%, transparent);
+    color: var(--color-ink);
+  }
+
+  /* thin instrument scrollbars */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-line-strong) transparent;
+  }
+  *::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: var(--color-line-strong);
+    border-radius: 999px;
+    border: 3px solid transparent;
+    background-clip: content-box;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: var(--color-ink-faint);
+  }
+
+  :focus-visible {
+    outline: 2px solid color-mix(in oklch, var(--color-accent) 65%, transparent);
+    outline-offset: 1px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+/* faint cartographic grid for empty/console backdrops */
+@utility bg-grid {
+  background-image: linear-gradient(
+      to right,
+      color-mix(in oklch, var(--color-line) 55%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in oklch, var(--color-line) 55%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 36px 36px;
+}
+
+/* uppercase micro-label used across the instrument */
+@utility label-eyebrow {
+  font-size: var(--text-2xs);
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--color-ink-faint);
+  font-weight: 500;
+}
+
+@keyframes fk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@utility animate-rise {
+  animation: fk-rise 0.42s var(--ease-out-quint) both;
 }

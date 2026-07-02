@@ -11,9 +11,11 @@ import { ChatPane } from "./ChatPane";
 import { MapCanvas } from "./MapCanvas";
 import { CanvasOverlay } from "./CanvasOverlay";
 import { ImmersiveOverlay } from "./ImmersiveOverlay";
+import { InsightCanvas } from "./InsightCard";
 
 export function AskSurface() {
   const mode = useAsk((s) => s.mode);
+  const answerKind = useAsk((s) => s.answerKind);
   const [chatW, setChatW] = useState(424);
 
   function startDrag(e: React.PointerEvent) {
@@ -49,8 +51,14 @@ export function AskSurface() {
       )}
       <div className="relative min-w-0 flex-1">
         <MapCanvas />
-        {mode === "immersive" ? <ImmersiveOverlay /> : <CanvasOverlay />}
-        {mode === "immersive" && <FloatingChat />}
+        {answerKind === "insight" ? (
+          <InsightCanvas />
+        ) : mode === "immersive" ? (
+          <ImmersiveOverlay />
+        ) : (
+          <CanvasOverlay />
+        )}
+        {mode === "immersive" && answerKind !== "insight" && <FloatingChat />}
       </div>
     </div>
   );

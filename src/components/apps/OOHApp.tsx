@@ -2,12 +2,20 @@
 
 import { useMemo, useState } from "react";
 import { Tv, Plus, Check, Download, Layers, Zap, Lightbulb } from "lucide-react";
-import { buildPanels, OOH_CAMPAIGN, type Panel } from "@/lib/mock/ooh";
+import {
+  buildPanels,
+  OOH_CAMPAIGN,
+  OOH_UNIVERSE,
+  OOH_COMPOSITION,
+  type Panel,
+  type PanelFormat,
+} from "@/lib/mock/ooh";
 import { AppMap } from "./AppMap";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/cn";
 import { fmtCompact, fmtUSD, fmtUSDCompact } from "@/lib/format";
+import { AreaChart, Donut } from "@/components/ui/charts";
 
 const idxHex = (i: number) =>
   i >= 190 ? "#45e0cb" : i >= 150 ? "#33D6C6" : i >= 115 ? "#E3B341" : "#E98AA0";
@@ -19,6 +27,13 @@ export function OOHApp() {
     () => new Set(panels.slice(0, 4).map((p) => p.id))
   );
   const selected = panels.find((p) => p.id === selectedId) ?? null;
+
+  const [fmt, setFmt] = useState<PanelFormat | "All">("All");
+  const [illumOnly, setIllumOnly] = useState(false);
+  const filtered = useMemo(
+    () => panels.filter((p) => (fmt === "All" || p.format === fmt) && (!illumOnly || p.illuminated)),
+    [panels, fmt, illumOnly]
+  );
 
   const togglePlan = (id: string) =>
     setPlan((s) => {
@@ -37,7 +52,16 @@ export function OOHApp() {
     return { count: inPlan.length, impressions, reach, budget, freq };
   }, [panels, plan]);
 
-  const mapPoints = panels.map((p) => ({ id: p.id, lng: p.lng, lat: p.lat, value: p.index }));
+  const rfCurve = useMemo(() => {
+    const inPlan = panels.filter((p) => plan.has(p.id)).sort((a, b) => b.reach - a.reach);
+    let cum = 0;
+    return inPlan.map((p, i) => {
+      cum = Math.min(OOH_UNIVERSE, cum + p.reach * Math.pow(0.8, i));
+      return { label: `${i + 1}`, value: Math.round(cum) };
+    });
+  }, [panels, plan]);
+
+  const mapPoints = filtered.map((p) => ({ id: p.id, lng: p.lng, lat: p.lat, value: p.index }));
 
   return (
     <div className="flex h-full flex-col">
@@ -65,10 +89,37 @@ export function OOHApp() {
         <aside className="flex w-[300px] shrink-0 flex-col border-r border-line bg-panel">
           <div className="flex items-center justify-between border-b border-line px-3 py-2">
             <span className="label-eyebrow">Inventory</span>
-            <span className="text-2xs text-ink-faint">{panels.length} panels · by index</span>
+            <span className="text-2xs text-ink-faint">
+              {filtered.length} of {panels.length}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5 border-b border-line px-3 py-2">
+            <select
+              value={fmt}
+              onChange={(e) => setFmt(e.target.value as PanelFormat | "All")}
+              className="h-7 flex-1 rounded-md border border-line bg-canvas px-2 text-xs text-ink outline-none focus:border-accent-dim"
+            >
+              {["All", "Billboard", "Digital", "Transit", "Street"].map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={() => setIllumOnly((v) => !v)}
+              className={cn(
+                "flex h-7 items-center gap-1 rounded-md border px-2 text-xs transition-colors",
+                illumOnly
+                  ? "border-accent-dim bg-accent-tint text-accent"
+                  : "border-line text-ink-muted hover:bg-panel-2"
+              )}
+            >
+              <Lightbulb className="size-3" />
+              Lit
+            </button>
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
-            {panels.map((p) => (
+            {filtered.map((p) => (
               <PanelRow
                 key={p.id}
                 panel={p}
@@ -78,6 +129,9 @@ export function OOHApp() {
                 onToggle={() => togglePlan(p.id)}
               />
             ))}
+            {filtered.length === 0 && (
+              <div className="p-4 text-center text-xs text-ink-faint">No panels match.</div>
+            )}
           </div>
         </aside>
 
@@ -107,7 +161,7 @@ export function OOHApp() {
               onToggle={() => togglePlan(selected.id)}
             />
           )}
-          <CampaignSummary summary={summary} />
+          <CampaignSummary summary={summary} rfCurve={rfCurve} />
         </aside>
       </div>
     </div>
@@ -229,8 +283,10 @@ function PanelDetail({
 
 function CampaignSummary({
   summary,
+  rfCurve,
 }: {
   summary: { count: number; impressions: number; reach: number; budget: number; freq: number };
+  rfCurve: { label: string; value: number }[];
 }) {
   const over = summary.budget > OOH_CAMPAIGN.budget;
   const pct = Math.min(100, Math.round((summary.budget / OOH_CAMPAIGN.budget) * 100));
@@ -260,6 +316,23 @@ function CampaignSummary({
             style={{ width: `${pct}%` }}
           />
         </div>
+      </div>
+
+      {rfCurve.length >= 2 && (
+        <div className="mt-4">
+          <div className="mb-1.5 flex items-center justify-between text-xs">
+            <span className="text-ink-muted">Reach build-up</span>
+            <span className="tabular-nums text-ink-faint">
+              {fmtCompact(rfCurve[rfCurve.length - 1].value)} net
+            </span>
+          </div>
+          <AreaChart data={rfCurve} height={78} />
+        </div>
+      )}
+
+      <div className="mt-4">
+        <div className="label-eyebrow mb-2">Audience reached</div>
+        <Donut segments={OOH_COMPOSITION} size={84} centerLabel="Mix" />
       </div>
 
       <Button variant="primary" className="mt-4 w-full">

@@ -73,7 +73,26 @@ export type ResultPayload = {
   followups: string[];
 };
 
-export type AgentResponse = { text: string; result: ResultPayload };
+export type InsightChart =
+  | { type: "area"; data: { label: string; value: number }[] }
+  | { type: "bars"; data: { label: string; value: number; color?: string }[] }
+  | { type: "donut"; segments: { label: string; value: number; color: string }[]; centerLabel?: string };
+
+export type InsightPayload = {
+  kind: "insight";
+  title: string;
+  place: string;
+  headline: { value: string; label: string; delta?: number };
+  chart: InsightChart;
+  stats: { label: string; value: string }[];
+  note?: string;
+  provenance: Provenance[];
+  followups: string[];
+};
+
+export type AgentResponse =
+  | { text: string; kind: "map"; result: ResultPayload }
+  | { text: string; kind: "insight"; insight: InsightPayload };
 
 /* --------------------------- presets ----------------------------- */
 const DS: Record<string, Provenance> = {
@@ -220,9 +239,9 @@ function buildPlaces(lq: string, place: string, city: CityDef, rng: () => number
     ],
     provenance: [DS.poi, DS.movement, DS.demo],
     followups: [
-      `Compare the top 5 by trade area`,
-      `Overlay high-income households`,
-      `Save these ${features.length} to a List`,
+      `Show the 12-month footfall trend in ${place}`,
+      `Footfall breakdown by device`,
+      `Overlay high-income households in ${place}`,
     ],
   };
 }
@@ -348,8 +367,119 @@ function buildAreas(opts: {
         ],
     provenance: isAudience ? [DS.audience, DS.demo, DS.ctv] : [DS.poi, DS.movement, DS.demo],
     followups: isAudience
-      ? [`Build a lookalike from this audience`, `Activate to CTV / programmatic`, `Push to a List & enrich`]
-      : [`Rank by per-capita instead`, `Overlay my existing stores`, `Find white-space areas`],
+      ? [`Show ${segment} trend over 12 months`, `${segment} breakdown by device`, `Map high-income households in ${place}`]
+      : [`Show the footfall trend in ${place}`, `Footfall breakdown by category`, `Find white-space areas in ${place}`],
+  };
+}
+
+/* --------------------------- insights (non-spatial) --------------------------- */
+const INSIGHT_RE =
+  /\btrend|over time|last \d|past \d|month over month|year over year|\byoy\b|growth|forecast|how many|how much|number of|\bcompare\b|versus|\bvs\b|share of|breakdown|split|composition|distribution|% of|\baverage\b|\bmedian\b|by device|by category|by daypart/;
+const MONTHS = ["Jul", "Aug", "Sep", "Oct", "Nov", "Dec", "Jan", "Feb", "Mar", "Apr", "May", "Jun"];
+
+function insightSubject(lq: string) {
+  if (/spend|sales|revenue/.test(lq)) return "spend";
+  if (/audience|people|customer|shopper|household/.test(lq)) return "audience";
+  if (/store|site|location/.test(lq)) return "locations";
+  return "footfall";
+}
+
+function buildInsight(lq: string, place: string, rng: () => number): InsightPayload {
+  const subj = insightSubject(lq);
+  const Subj = subj[0].toUpperCase() + subj.slice(1);
+
+  if (/share|breakdown|split|composition|distribution|% of|by device|by category/.test(lq)) {
+    const byDevice = /device|ctv|mobile|desktop/.test(lq);
+    const segments = byDevice
+      ? [
+          { label: "Mobile", value: 54, color: MAP.teal },
+          { label: "CTV", value: 29, color: MAP.violet },
+          { label: "Desktop", value: 17, color: MAP.blue },
+        ]
+      : [
+          { label: "Coffee & QSR", value: 34, color: MAP.teal },
+          { label: "Grocery", value: 27, color: MAP.violet },
+          { label: "Retail", value: 22, color: MAP.amber },
+          { label: "Other", value: 17, color: MAP.blue },
+        ];
+    return {
+      kind: "insight",
+      title: `${Subj} breakdown · ${place}`,
+      place,
+      headline: { value: `${segments[0].value}%`, label: `${segments[0].label} — largest share` },
+      chart: { type: "donut", segments, centerLabel: byDevice ? "Device" : "Category" },
+      stats: segments.slice(0, 3).map((s) => ({ label: s.label, value: `${s.value}%` })),
+      note: `${segments[0].label} makes up the largest share of ${subj} in ${place}.`,
+      provenance: byDevice ? [DS.ctv, DS.audience] : [DS.movement, DS.poi],
+      followups: [`Compare ${place} to national average`, `Show the 12-month trend`, `Activate the top segment`],
+    };
+  }
+
+  if (/\bcompare\b|versus|\bvs\b/.test(lq)) {
+    const cats = ["Coffee", "QSR", "Grocery", "Pharmacy", "Fitness"]
+      .map((c, i) => ({ label: c, value: Math.round(6000 + rng() * 44000), color: [MAP.teal, MAP.violet, MAP.amber, MAP.blue, MAP.green][i] }))
+      .sort((a, b) => b.value - a.value);
+    return {
+      kind: "insight",
+      title: `Category comparison · ${place}`,
+      place,
+      headline: { value: fmtCompact(cats[0].value), label: `${cats[0].label} leads visits/mo` },
+      chart: { type: "bars", data: cats },
+      stats: cats.slice(0, 3).map((c) => ({ label: c.label, value: fmtCompact(c.value) })),
+      note: `${cats[0].label} draws the most monthly visits across ${place}.`,
+      provenance: [DS.movement, DS.poi],
+      followups: [`Map ${cats[0].label} in ${place}`, `Show the 12-month trend`, `Break down by daypart`],
+    };
+  }
+
+  if (/how many|how much|number of|count of/.test(lq)) {
+    const total = Math.round(140000 + rng() * 860000);
+    const bars = [
+      { label: "25–34", value: Math.round(total * 0.31) },
+      { label: "35–44", value: Math.round(total * 0.28) },
+      { label: "45–54", value: Math.round(total * 0.22) },
+      { label: "55+", value: Math.round(total * 0.19) },
+    ];
+    return {
+      kind: "insight",
+      title: `Estimated count · ${place}`,
+      place,
+      headline: { value: fmtCompact(total), label: `match in ${place}` },
+      chart: { type: "bars", data: bars },
+      stats: [
+        { label: "Match rate", value: "73%" },
+        { label: "CTV-reachable", value: fmtCompact(Math.round(total * 0.68)) },
+        { label: "Avg HH income", value: "$128k" },
+      ],
+      note: `~${fmtCompact(total)} match across ${place}, modeled from the People & Demographics graphs.`,
+      provenance: [DS.audience, DS.demo],
+      followups: [`Build this as an audience`, `Map high-income households in ${place}`, `Break down by device`],
+    };
+  }
+
+  // default -> trend
+  let v = 18000 + rng() * 34000;
+  const series = MONTHS.map((label) => {
+    v = Math.max(4000, v * (0.965 + rng() * 0.1));
+    return { label, value: Math.round(v) };
+  });
+  const first = series[0].value;
+  const last = series[series.length - 1].value;
+  const delta = ((last - first) / first) * 100;
+  return {
+    kind: "insight",
+    title: `${Subj} trend · ${place}`,
+    place,
+    headline: { value: fmtCompact(last), label: `${subj}/mo · latest`, delta },
+    chart: { type: "area", data: series },
+    stats: [
+      { label: "12-mo change", value: `${delta >= 0 ? "+" : ""}${delta.toFixed(1)}%` },
+      { label: "Peak", value: fmtCompact(Math.max(...series.map((s) => s.value))) },
+      { label: "Avg / mo", value: fmtCompact(Math.round(series.reduce((s, x) => s + x.value, 0) / series.length)) },
+    ],
+    note: `${Subj} in ${place} ${delta >= 0 ? "grew" : "declined"} ${Math.abs(delta).toFixed(0)}% over the last 12 months.`,
+    provenance: [DS.movement, DS.poi],
+    followups: [`Break down by category`, `Compare to last year`, `Forecast next quarter`],
   };
 }
 
@@ -359,6 +489,15 @@ export function runAgent(query: string): AgentResponse {
   const city = detectCity(lq)?.def ?? DEFAULT_CITY;
   const place = city.label;
   const rng = seeded(hash(lq) || 7);
+
+  if (INSIGHT_RE.test(lq)) {
+    const insight = buildInsight(lq, place, rng);
+    return {
+      text: insight.note ?? `Here's the ${insight.title.toLowerCase()}.`,
+      kind: "insight",
+      insight,
+    };
+  }
 
   let kind: ResultKind = "places";
   if (
@@ -383,7 +522,7 @@ export function runAgent(query: string): AgentResponse {
       ? ` Built from ${result.provenance.map((p) => p.dataset).slice(0, 2).join(" + ")}.`
       : "");
 
-  return { text, result };
+  return { text, kind: "map", result };
 }
 
 export const SAMPLE_PROMPTS = [

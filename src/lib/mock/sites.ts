@@ -94,3 +94,20 @@ export const PROJECT = {
   brand: "Premium grocery · high-income families",
   metro: "Austin, TX",
 };
+
+export function siteDemographics(site: Site) {
+  const rng = seeded((Math.abs(Math.round(site.lng * 1000 + site.lat * 900)) % 9973) + site.id.length);
+  const population = Math.round(18000 + rng() * 92000);
+  const income = Math.round(58 + rng() * 142);
+  const age = Math.round(30 + rng() * 16);
+  const daytime = Math.round(population * (1.1 + rng() * 0.9));
+  const households = Math.round(population / 2.4);
+  const growth = +(rng() * 8 - 1.5).toFixed(1);
+  const ageBands = [
+    { label: "<18", value: 14 + Math.round(rng() * 10) },
+    { label: "18–34", value: 24 + Math.round(rng() * 14) },
+    { label: "35–54", value: 22 + Math.round(rng() * 12) },
+    { label: "55+", value: 16 + Math.round(rng() * 12) },
+  ];
+  return { population, income, age, daytime, households, growth, ageBands };
+}

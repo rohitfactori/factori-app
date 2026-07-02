@@ -73,3 +73,13 @@ export const AUDIENCE = {
   name: "High-income gym-goers — CA",
   base: CA_BASE,
 };
+
+/** Over-index vs. the general population (100 = average). */
+export const INDEX = [
+  { label: "Visits gyms 3+/mo", value: 214 },
+  { label: "HHI $150k+", value: 188 },
+  { label: "CTV-reachable", value: 163 },
+  { label: "Dines out 2+/wk", value: 147 },
+  { label: "Auto intenders", value: 132 },
+  { label: "Frequent travelers", value: 121 },
+];

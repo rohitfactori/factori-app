@@ -5,6 +5,7 @@ import { ArrowUp, Plus, MapPin, X } from "lucide-react";
 import { useAsk } from "@/lib/store/ask";
 import { FactoriMark } from "@/components/brand";
 import { cn } from "@/lib/cn";
+import { InsightCard } from "./InsightCard";
 import type { ChatMessage } from "@/lib/store/ask";
 
 export function ChatPane({ onHide }: { onHide?: () => void } = {}) {
@@ -120,12 +121,14 @@ function Bubble({ m, hasResult }: { m: ChatMessage; hasResult: boolean }) {
       </div>
       <div className="min-w-0 flex-1 space-y-1.5">
         <p className="text-sm leading-[1.5] text-ink-muted">{m.text}</p>
-        {hasResult && (
+        {m.insight ? (
+          <InsightCard insight={m.insight} variant="chat" />
+        ) : hasResult ? (
           <div className="inline-flex items-center gap-1.5 text-xs text-accent">
             <MapPin className="size-3.5" />
             Rendered on the canvas
           </div>
-        )}
+        ) : null}
       </div>
     </div>
   );

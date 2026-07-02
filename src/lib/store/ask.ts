@@ -5,12 +5,14 @@ import {
   type ResultPayload,
   type LayerDef,
   type Control,
+  type InsightPayload,
 } from "@/lib/mock/agent";
 
 export type ChatMessage = {
   id: string;
   role: "user" | "assistant";
   text: string;
+  insight?: InsightPayload;
 };
 export type CanvasMode = "console" | "split" | "immersive";
 export type Basemap = "dark" | "light" | "satellite";
@@ -25,6 +27,8 @@ type AskState = {
   isThinking: boolean;
   mode: CanvasMode;
   result: ResultPayload | null;
+  insight: InsightPayload | null;
+  answerKind: "map" | "insight" | null;
   layers: LayerDef[];
   controls: Control[];
   selectedId: string | null;
@@ -55,6 +59,8 @@ export const useAsk = create<AskState>((set, get) => ({
   isThinking: false,
   mode: "console",
   result: null,
+  insight: null,
+  answerKind: null,
   layers: [],
   controls: [],
   selectedId: null,
@@ -75,14 +81,28 @@ export const useAsk = create<AskState>((set, get) => ({
       selectedId: null,
     }));
     setTimeout(() => {
-      const { text, result } = runAgent(query);
-      set((s) => ({
-        isThinking: false,
-        result,
-        layers: result.layers.map((l) => ({ ...l })),
-        controls: result.controls.map((c) => ({ ...c })),
-        messages: [...s.messages, { id: nextId(), role: "assistant", text }],
-      }));
+      const res = runAgent(query);
+      if (res.kind === "insight") {
+        set((s) => ({
+          isThinking: false,
+          insight: res.insight,
+          answerKind: "insight",
+          mode: "split",
+          messages: [
+            ...s.messages,
+            { id: nextId(), role: "assistant", text: res.text, insight: res.insight },
+          ],
+        }));
+      } else {
+        set((s) => ({
+          isThinking: false,
+          result: res.result,
+          answerKind: "map",
+          layers: res.result.layers.map((l) => ({ ...l })),
+          controls: res.result.controls.map((c) => ({ ...c })),
+          messages: [...s.messages, { id: nextId(), role: "assistant", text: res.text }],
+        }));
+      }
     }, 850);
   },
 
@@ -112,6 +132,8 @@ export const useAsk = create<AskState>((set, get) => ({
       isThinking: false,
       mode: "console",
       result: null,
+      insight: null,
+      answerKind: null,
       layers: [],
       controls: [],
       selectedId: null,

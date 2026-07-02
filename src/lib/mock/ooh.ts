@@ -57,3 +57,12 @@ export const OOH_CAMPAIGN = {
   budget: 120_000,
   market: "Los Angeles, CA",
 };
+
+export const OOH_UNIVERSE = 3_200_000;
+
+export const OOH_COMPOSITION = [
+  { label: "High-income commuters", value: 42, color: "#33D6C6" },
+  { label: "Affluent millennials", value: 31, color: "#A99BF2" },
+  { label: "Families w/ kids", value: 17, color: "#E3B341" },
+  { label: "Other", value: 10, color: "#73A9E6" },
+];

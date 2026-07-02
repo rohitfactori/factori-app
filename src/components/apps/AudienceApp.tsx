@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Target, Check, Plus, Save, Zap, Layers, Lock } from "lucide-react";
+import { Target, Check, Plus, Save, Zap, Layers, Lock, Sparkles } from "lucide-react";
 import {
   RULES,
   estimateSize,
@@ -9,6 +9,7 @@ import {
   PROFILE,
   DESTINATIONS,
   AUDIENCE,
+  INDEX,
   type RuleGroup,
 } from "@/lib/mock/audience";
 import { AppMap } from "./AppMap";
@@ -37,6 +38,10 @@ export function AudienceApp() {
   const size = useMemo(() => estimateSize(enabled), [enabled]);
   const pctOfCA = size / AUDIENCE.base;
   const ctvReach = Math.round(size * 0.68);
+
+  const [expansion, setExpansion] = useState(0);
+  const expanded = Math.round(size * (1 + (expansion / 100) * 3));
+  const precision = Math.max(40, Math.round(100 - expansion * 0.5));
 
   return (
     <div className="flex h-full flex-col">
@@ -157,6 +162,49 @@ export function AudienceApp() {
           </div>
 
           <div className="p-4">
+            <div className="mb-2 flex items-center justify-between">
+              <div className="label-eyebrow flex items-center gap-1.5">
+                <Sparkles className="size-3 text-accent" />
+                Lookalike expansion
+              </div>
+              <span className="text-xs tabular-nums text-ink">
+                {expansion === 0 ? "Seed" : `+${expansion}%`}
+              </span>
+            </div>
+            <input
+              type="range"
+              min={0}
+              max={100}
+              step={5}
+              value={expansion}
+              onChange={(e) => setExpansion(Number(e.target.value))}
+              className="h-1 w-full cursor-pointer"
+              style={{ accentColor: "var(--color-accent)" }}
+            />
+            <div className="mt-1 flex justify-between text-[10px] text-ink-faint">
+              <span>Precise</span>
+              <span>Broad reach</span>
+            </div>
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              <div className="rounded-md border border-line bg-canvas/40 px-2.5 py-1.5">
+                <div className="label-eyebrow">Expanded reach</div>
+                <div className="mt-0.5 text-sm font-semibold tabular-nums text-accent">
+                  {fmtCompact(expanded)}
+                </div>
+              </div>
+              <div className="rounded-md border border-line bg-canvas/40 px-2.5 py-1.5">
+                <div className="label-eyebrow">Precision</div>
+                <div className="mt-0.5 text-sm font-semibold tabular-nums text-ink">{precision}%</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4">
+            <div className="label-eyebrow mb-2.5">Over-index vs. average (100)</div>
+            <IndexBars data={INDEX} />
+          </div>
+
+          <div className="p-4">
             <div className="label-eyebrow mb-2.5">Audience profile</div>
             <div className="space-y-3">
               <MiniBars title="Age" data={PROFILE.age} />
@@ -200,6 +248,35 @@ function Stat({ label, value, accent }: { label: string; value: string; accent?:
       <div className={cn("mt-0.5 text-sm font-semibold tabular-nums", accent ? "text-accent" : "text-ink")}>
         {value}
       </div>
+    </div>
+  );
+}
+
+function IndexBars({ data }: { data: { label: string; value: number }[] }) {
+  const max = Math.max(...data.map((d) => d.value), 120);
+  const basePct = (100 / max) * 100;
+  return (
+    <div className="space-y-1.5">
+      {data.map((d) => {
+        const over = d.value >= 100;
+        return (
+          <div key={d.label} className="flex items-center gap-2">
+            <span className="w-28 shrink-0 truncate text-[11px] text-ink-faint">{d.label}</span>
+            <div className="relative h-2 flex-1 overflow-hidden rounded-full bg-panel-3">
+              <span
+                className="block h-full rounded-full"
+                style={{ width: `${(d.value / max) * 100}%`, background: over ? "#33D6C6" : "#E3B341" }}
+              />
+              <span className="absolute inset-y-0 w-px bg-ink-faint/70" style={{ left: `${basePct}%` }} />
+            </div>
+            <span
+              className={cn("w-8 shrink-0 text-right text-[11px] font-medium tabular-nums", over ? "text-accent" : "text-warning")}
+            >
+              {d.value}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
 }

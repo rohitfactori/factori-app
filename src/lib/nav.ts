@@ -1,5 +1,6 @@
 import {
   Compass,
+  Hexagon,
   LayoutGrid,
   Database,
   List,
@@ -29,6 +30,7 @@ export type NavItem = {
 
 export const workNav: NavItem[] = [
   { label: "Ask", href: "/", icon: Compass, match: (p) => p === "/" },
+  { label: "Explore", href: "/explore", icon: Hexagon, match: (p) => p.startsWith("/explore") },
   { label: "Apps", href: "/apps", icon: LayoutGrid, match: (p) => p.startsWith("/apps") },
   { label: "Catalog", href: "/catalog", icon: Database, match: (p) => p.startsWith("/catalog") },
   { label: "Lists & Enrich", href: "/lists", icon: List, match: (p) => p.startsWith("/lists") },

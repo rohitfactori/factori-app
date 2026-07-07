@@ -4,7 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef, useState } from "react";
 import { useExplore } from "@/lib/store/explore";
 import { colorExpr, formatMetric, LAYER_CONFIGS, METRIC_BY_ID, POI_COLORS, readValue, rendersHex } from "@/lib/explore/metrics";
-import { loadSnapshot } from "@/lib/snapshot/client";
+import { loadSnapshot, resetSnapshotCache, type Snapshot } from "@/lib/snapshot/client";
 import { LA } from "@/lib/snapshot/la-meta";
 import type { ExploreLayer, HexProps } from "@/lib/snapshot/types";
 import { HexTooltip, type TooltipData } from "./HexTooltip";
@@ -39,6 +39,22 @@ const BM: Record<string, string> = { dark: "bm-dark", light: "bm-light", satelli
 const SPLIT = 11.3; // r7 below, r8 above
 
 const fillIds = (l: ExploreLayer) => [`xl-${l.id}-7`, `xl-${l.id}-8`];
+
+/** never hang a demo on a fetch: timeout, reset the cache, retry */
+async function loadSnapshotWithRetry(): Promise<Snapshot> {
+  for (let i = 0; i < 2; i++) {
+    try {
+      return await Promise.race([
+        loadSnapshot(),
+        new Promise<never>((_, rej) => setTimeout(() => rej(new Error("snapshot timeout")), 8000)),
+      ]);
+    } catch {
+      resetSnapshotCache();
+      await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+  return loadSnapshot();
+}
 
 function applyBasemap(map: any, basemap: string) {
   for (const k of Object.keys(BM)) {
@@ -98,8 +114,10 @@ export function ExploreMap() {
   const mapRef = useRef<any>(null);
   const readyRef = useRef(false); // map loaded AND snapshot sources added
   const [snapReady, setSnapReady] = useState(false);
+  const [snapError, setSnapError] = useState(false);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const raf = useRef(0);
+  const retryRef = useRef<() => void>(() => {});
 
   const layers = useExplore((s) => s.layers);
   const timeIndex = useExplore((s) => s.timeIndex);
@@ -124,18 +142,34 @@ export function ExploreMap() {
         pitchWithRotate: false,
       });
       mapRef.current = map;
-      if (process.env.NODE_ENV !== "production") (window as any).__exploreMap = map;
       map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "bottom-right");
       ro = new ResizeObserver(() => map.resize());
       ro.observe(containerRef.current);
 
-      map.on("load", async () => {
-        const snap = await loadSnapshot();
-        if (cancelled) return;
-        map.addSource("hex-r7", { type: "geojson", data: snap.r7 });
-        map.addSource("hex-r8", { type: "geojson", data: snap.r8 });
-        map.addSource("poi-src", { type: "geojson", data: snap.poi });
+      const initData = async () => {
+        try {
+          setSnapError(false);
+          const snap = await loadSnapshotWithRetry();
+          if (cancelled) return;
+          if (!map.getSource("hex-r7")) {
+            map.addSource("hex-r7", { type: "geojson", data: snap.r7 });
+            map.addSource("hex-r8", { type: "geojson", data: snap.r8 });
+            map.addSource("poi-src", { type: "geojson", data: snap.poi });
+            addDataLayers(map);
+          }
+          readyRef.current = true;
+          setSnapReady(true);
+          if (process.env.NODE_ENV !== "production") (window as any).__exploreMap = map;
+          const st = useExplore.getState();
+          syncLayers(map, st.layers, st.timeIndex);
+          applyBasemap(map, st.basemap);
+        } catch {
+          if (!cancelled) setSnapError(true);
+        }
+      };
+      retryRef.current = () => void initData();
 
+      const addDataLayers = (map: any) => {
         map.addLayer({
           id: "poi-circles",
           type: "circle",
@@ -167,12 +201,10 @@ export function ExploreMap() {
             paint: { "line-color": "#EAF6F4", "line-width": 2 },
           });
         }
+      };
 
-        readyRef.current = true;
-        setSnapReady(true);
-        const st = useExplore.getState();
-        syncLayers(map, st.layers, st.timeIndex);
-        applyBasemap(map, st.basemap);
+      map.on("load", () => {
+        void initData();
 
         /* ---- pointer interactions (query top hex fill under cursor) ---- */
         const topFillIds = () => {
@@ -272,8 +304,17 @@ export function ExploreMap() {
       {/* maplibre-gl.css forces position:relative on the container — size with h/w-full */}
       <div ref={containerRef} className="h-full w-full" />
       {!snapReady && (
-        <div className="absolute left-1/2 top-1/2 z-10 -translate-x-1/2 -translate-y-1/2 rounded-full border border-line bg-panel/90 px-3 py-1.5 text-xs text-ink-muted backdrop-blur">
-          Loading LA snapshot…
+        <div className="absolute left-1/2 top-1/2 z-10 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border border-line bg-panel/90 px-3 py-1.5 text-xs backdrop-blur">
+          {snapError ? (
+            <>
+              <span className="text-negative">Snapshot failed to load.</span>
+              <button className="font-medium text-accent hover:underline" onClick={() => retryRef.current()}>
+                Retry
+              </button>
+            </>
+          ) : (
+            <span className="text-ink-muted">Loading LA snapshot…</span>
+          )}
         </div>
       )}
       <HexTooltip data={tooltip} />

@@ -17,10 +17,12 @@ const BASE = "/snapshot/la";
 let promise: Promise<Snapshot> | null = null;
 let loaded: Snapshot | null = null;
 
-export function __resetSnapshotForTests() {
+export function resetSnapshotCache() {
   promise = null;
   loaded = null;
 }
+/** @deprecated test alias */
+export const __resetSnapshotForTests = resetSnapshotCache;
 
 async function fetchJson<T>(fetcher: typeof fetch, url: string): Promise<T> {
   const res = await fetcher(url);

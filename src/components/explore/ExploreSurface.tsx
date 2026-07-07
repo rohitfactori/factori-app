@@ -6,6 +6,7 @@ import { LAYER_CONFIGS } from "@/lib/explore/metrics";
 import { AreaPanel } from "./AreaPanel";
 import { ExploreMap } from "./ExploreMap";
 import { LayerRail } from "./LayerRail";
+import { TimeScrubber } from "./TimeScrubber";
 
 export function ExploreSurface() {
   // Seed the first layer (catalog handoff via ?dataset=…, else Movement visits).
@@ -23,8 +24,9 @@ export function ExploreSurface() {
       <ExploreMap />
       <LayerRail />
       <AreaPanel />
+      <TimeScrubber />
       {/* top strip (search · views · market · basemap) — Tasks 10/12 */}
-      {/* <TimeScrubber /> Task 9 · <ChatDock /> Task 11 · <GetDataSheet /> Task 12 */}
+      {/* <ChatDock /> Task 11 · <GetDataSheet /> Task 12 */}
     </div>
   );
 }

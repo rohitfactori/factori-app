@@ -14,8 +14,10 @@ import {
   Check,
   ChevronUp,
   ChevronDown,
+  Hexagon,
 } from "lucide-react";
 import { getDataset, generatePreview } from "@/lib/mock/platform";
+import { LAYER_CONFIGS } from "@/lib/explore/metrics";
 import { Page, PageHeader, PageBody } from "@/components/shell/Page";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -56,6 +58,14 @@ export default function DatasetPage({
         sub={`${ds.category} · ${ds.records} records · refreshed ${ds.freshness.toLowerCase()}`}
         actions={
           <>
+            {LAYER_CONFIGS[ds.id] && (
+              <Link href={`/explore?dataset=${ds.id}`}>
+                <Button variant="secondary">
+                  <Hexagon className="size-3.5" />
+                  Open in Explorer
+                </Button>
+              </Link>
+            )}
             <Button variant="secondary">
               <Download className="size-3.5" />
               Download sample

@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useExplore } from "@/lib/store/explore";
 import { LAYER_CONFIGS } from "@/lib/explore/metrics";
+import { AreaPanel } from "./AreaPanel";
 import { ExploreMap } from "./ExploreMap";
 import { LayerRail } from "./LayerRail";
 
@@ -21,8 +22,9 @@ export function ExploreSurface() {
     <div className="relative h-full">
       <ExploreMap />
       <LayerRail />
+      <AreaPanel />
       {/* top strip (search · views · market · basemap) — Tasks 10/12 */}
-      {/* <AreaPanel /> Task 8 · <TimeScrubber /> Task 9 · <ChatDock /> Task 11 · <GetDataSheet /> Task 12 */}
+      {/* <TimeScrubber /> Task 9 · <ChatDock /> Task 11 · <GetDataSheet /> Task 12 */}
     </div>
   );
 }

@@ -146,10 +146,29 @@ export function ExploreMap() {
       ro = new ResizeObserver(() => map.resize());
       ro.observe(containerRef.current);
 
+      // Don't gate startup on the `load` event — poll style readiness as a
+      // state check instead. Event timing proved fragile; a demo must not
+      // depend on it, and this also lets the snapshot download in parallel.
+      const styleReady = () =>
+        new Promise<void>((resolve) => {
+          if (map.isStyleLoaded()) return resolve();
+          const t = setInterval(() => {
+            if (cancelled || map.isStyleLoaded()) {
+              clearInterval(t);
+              resolve();
+            }
+          }, 80);
+          map.once("load", () => {
+            clearInterval(t);
+            resolve();
+          });
+        });
+
       const initData = async () => {
         try {
           setSnapError(false);
           const snap = await loadSnapshotWithRetry();
+          await styleReady();
           if (cancelled) return;
           if (!map.getSource("hex-r7")) {
             map.addSource("hex-r7", { type: "geojson", data: snap.r7 });
@@ -203,9 +222,9 @@ export function ExploreMap() {
         }
       };
 
-      map.on("load", () => {
-        void initData();
+      void initData();
 
+      {
         /* ---- pointer interactions (query top hex fill under cursor) ---- */
         const topFillIds = () => {
           const hl = hexLayers(useExplore.getState().layers);
@@ -260,7 +279,7 @@ export function ExploreMap() {
           const c = map.getCenter();
           useExplore.getState().setCamera({ center: [c.lng, c.lat], zoom: map.getZoom() });
         });
-      });
+      }
     })();
     return () => {
       cancelled = true;

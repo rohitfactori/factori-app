@@ -18,10 +18,6 @@ export function ViewsMenu() {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (open) setUserViews(loadUserViews());
-  }, [open]);
-
-  useEffect(() => {
     if (!open) return;
     const onDown = (e: MouseEvent) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
@@ -67,7 +63,14 @@ export function ViewsMenu() {
 
   return (
     <div ref={ref} className="relative">
-      <Button variant="secondary" className="bg-panel/90 shadow-panel backdrop-blur-md" onClick={() => setOpen((v) => !v)}>
+      <Button
+        variant="secondary"
+        className="bg-panel/90 shadow-panel backdrop-blur-md"
+        onClick={() => {
+          if (!open) setUserViews(loadUserViews());
+          setOpen(!open);
+        }}
+      >
         <Bookmark />
         Views
         {savedTick ? <Check className="text-positive" /> : <ChevronDown />}

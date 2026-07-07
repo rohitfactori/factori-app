@@ -29,6 +29,8 @@ export type MetricDef = {
   domain: [number, number];
   ramp: readonly string[];
   temporal?: boolean;
+  /** long-tail metrics get compressed stop spacing so hotspots don't wash out */
+  curve?: "longtail";
   fmt: (v: number) => string;
 };
 
@@ -36,11 +38,11 @@ const idx = (v: number) => `${Math.round(v)}`;
 const pct = (v: number) => `${v.toFixed(0)}%`;
 
 export const METRICS: MetricDef[] = [
-  { id: "mv_visits", datasetId: "movement-graph", label: "Visits / month", domain: [0, 60000], ramp: RAMPS.teal, fmt: fmtCompact },
+  { id: "mv_visits", datasetId: "movement-graph", label: "Visits / month", domain: [0, 60000], ramp: RAMPS.teal, curve: "longtail", fmt: fmtCompact },
   { id: "mv_dwell", datasetId: "movement-graph", label: "Median dwell", domain: [6, 45], ramp: RAMPS.teal, fmt: (v) => `${Math.round(v)}m` },
   { id: "tr", datasetId: "foot-traffic-trends", label: "Visitation index", domain: [60, 160], ramp: RAMPS.amber, temporal: true, fmt: idx },
   { id: "dm_hhi", datasetId: "demographics-income", label: "Median HH income", domain: [35000, 220000], ramp: RAMPS.violet, fmt: fmtUSDCompact },
-  { id: "dm_pop", datasetId: "demographics-income", label: "Population", domain: [0, 9000], ramp: RAMPS.violet, fmt: fmtCompact },
+  { id: "dm_pop", datasetId: "demographics-income", label: "Population", domain: [0, 9000], ramp: RAMPS.violet, curve: "longtail", fmt: fmtCompact },
   { id: "dm_age", datasetId: "demographics-income", label: "Median age", domain: [26, 52], ramp: RAMPS.violet, fmt: idx },
   { id: "sp_food", datasetId: "consumer-spend", label: "Spend index — food & dining", domain: [60, 160], ramp: RAMPS.rose, fmt: idx },
   { id: "sp_retail", datasetId: "consumer-spend", label: "Spend index — retail", domain: [60, 160], ramp: RAMPS.rose, fmt: idx },
@@ -53,7 +55,7 @@ export const METRICS: MetricDef[] = [
   { id: "au_fit", datasetId: "people-audience", label: "Fitness enthusiasts", domain: [0, 40], ramp: RAMPS.blue, fmt: pct },
   { id: "au_mov", datasetId: "people-audience", label: "New movers", domain: [0, 40], ramp: RAMPS.blue, fmt: pct },
   { id: "au_lux", datasetId: "people-audience", label: "Luxury shoppers", domain: [0, 40], ramp: RAMPS.blue, fmt: pct },
-  { id: "poi_count", datasetId: "places-poi", label: "POI density", domain: [0, 120], ramp: RAMPS.green, fmt: idx },
+  { id: "poi_count", datasetId: "places-poi", label: "POI density", domain: [0, 120], ramp: RAMPS.green, curve: "longtail", fmt: idx },
 ];
 
 export const METRIC_BY_ID: Record<string, MetricDef> = Object.fromEntries(METRICS.map((m) => [m.id, m]));
@@ -179,11 +181,19 @@ export function rampFor(layer: ExploreLayer): readonly string[] {
   return METRIC_BY_ID[layer.metricId].ramp;
 }
 
+export const LINEAR_STOPS = [0, 0.25, 0.5, 0.75, 1];
+export const LONGTAIL_STOPS = [0, 0.06, 0.18, 0.45, 1]; // most cells sit low; brights reserved for true hotspots
+
+export function stopsFor(layer: ExploreLayer): number[] {
+  return METRIC_BY_ID[layer.metricId].curve === "longtail" ? LONGTAIL_STOPS : LINEAR_STOPS;
+}
+
 export function colorExpr(layer: ExploreLayer, timeIndex: number): unknown {
   const [lo, hi] = domainFor(layer);
   const ramp = rampFor(layer);
+  const pos = stopsFor(layer);
   const stops: unknown[] = [];
-  for (let i = 0; i < 5; i++) stops.push(lo + ((hi - lo) * i) / 4, ramp[i]);
+  for (let i = 0; i < 5; i++) stops.push(lo + (hi - lo) * pos[i], ramp[i]);
   return ["interpolate", ["linear"], valueExpr(layer, timeIndex), ...stops];
 }
 

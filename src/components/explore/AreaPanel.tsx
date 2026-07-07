@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { X } from "lucide-react";
 import { getSnapshotSync } from "@/lib/snapshot/client";
 import { LA } from "@/lib/snapshot/la-meta";
@@ -60,6 +61,16 @@ export function AreaPanel() {
   const setChatOpen = useExplore((s) => s.setChatOpen);
   const submitChat = useExplore((s) => s.submitChat);
   const openDataSheet = useExplore((s) => s.openDataSheet);
+
+  useEffect(() => {
+    if (!selectedHex) return;
+    const onKey = (e: KeyboardEvent) => {
+      // the data sheet owns Escape while it's open
+      if (e.key === "Escape" && !useExplore.getState().dataSheetFor) selectHex(null);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [selectedHex, selectHex]);
 
   const snap = getSnapshotSync();
   const p = selectedHex && snap ? snap.byId.get(selectedHex) : null;

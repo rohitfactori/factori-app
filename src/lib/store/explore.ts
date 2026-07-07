@@ -135,7 +135,14 @@ export const useExplore = create<ExploreState>((set, get) => ({
     const view: SavedView = {
       id: nextId("uv-"),
       name,
-      layers: s.layers.map(({ id: _id, ...rest }) => rest),
+      layers: s.layers.map((l) => ({
+        datasetId: l.datasetId,
+        metricId: l.metricId,
+        variant: l.variant,
+        poiCat: l.poiCat,
+        opacity: l.opacity,
+        visible: l.visible,
+      })),
       camera: s.camera ?? { center: [-118.33, 34.02], zoom: 9.7 },
       timeIndex: s.timeIndex,
     };

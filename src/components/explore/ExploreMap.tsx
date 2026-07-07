@@ -3,7 +3,7 @@
 import "maplibre-gl/dist/maplibre-gl.css";
 import { useEffect, useRef, useState } from "react";
 import { useExplore } from "@/lib/store/explore";
-import { colorExpr, formatMetric, LAYER_CONFIGS, METRIC_BY_ID, POI_COLORS, readValue, rendersHex } from "@/lib/explore/metrics";
+import { colorExpr, formatMetric, METRIC_BY_ID, POI_COLORS, readValue, rendersHex } from "@/lib/explore/metrics";
 import { loadSnapshot, resetSnapshotCache, type Snapshot } from "@/lib/snapshot/client";
 import { LA } from "@/lib/snapshot/la-meta";
 import type { ExploreLayer, HexProps } from "@/lib/snapshot/types";

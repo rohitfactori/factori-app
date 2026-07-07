@@ -33,7 +33,7 @@ export function LayerRail() {
   }
 
   return (
-    <div className="absolute bottom-3 left-3 top-16 z-10 flex w-[300px] flex-col">
+    <div className="absolute bottom-14 left-3 top-16 z-10 flex w-[300px] flex-col">
       <div className="flex items-center gap-2 pb-2">
         <Layers className="size-3.5 text-ink-faint" />
         <span className="label-eyebrow flex-1">

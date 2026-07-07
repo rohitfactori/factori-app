@@ -6,6 +6,7 @@ import { useExplore, type Basemap } from "@/lib/store/explore";
 import { LAYER_CONFIGS } from "@/lib/explore/metrics";
 import { Segmented } from "@/components/ui/field";
 import { AreaPanel } from "./AreaPanel";
+import { ChatDock } from "./ChatDock";
 import { ExploreMap } from "./ExploreMap";
 import { ExploreSearch } from "./ExploreSearch";
 import { LayerRail } from "./LayerRail";
@@ -41,7 +42,8 @@ export function ExploreSurface() {
       <LayerRail />
       <AreaPanel />
       <TimeScrubber />
-      {/* <ChatDock /> Task 11 · <GetDataSheet /> Task 12 */}
+      <ChatDock />
+      {/* <GetDataSheet /> Task 12 */}
     </div>
   );
 }

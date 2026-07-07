@@ -1,7 +1,11 @@
 "use client";
 import { create } from "zustand";
+import { parseIntent } from "@/lib/explore/intents";
 import { LAYER_CONFIGS } from "@/lib/explore/metrics";
-import type { ExploreLayer, SavedView } from "@/lib/snapshot/types";
+import { getSearchIndex, searchPlaces } from "@/lib/explore/search";
+import { getSnapshotSync } from "@/lib/snapshot/client";
+import { LA } from "@/lib/snapshot/la-meta";
+import type { ExploreLayer, PoiCategory, SavedView } from "@/lib/snapshot/types";
 
 export type ExploreChatMsg = { id: string; role: "user" | "assistant"; text: string };
 export type Basemap = "dark" | "light" | "satellite";
@@ -148,7 +152,6 @@ export const useExplore = create<ExploreState>((set, get) => ({
   openDataSheet: (datasetId) => set({ dataSheetFor: datasetId }),
   closeDataSheet: () => set({ dataSheetFor: null }),
 
-  // Placeholder agent — replaced by the intent parser in the chat task.
   submitChat: (text) => {
     const q = text.trim();
     if (!q || get().chatThinking) return;
@@ -157,14 +160,43 @@ export const useExplore = create<ExploreState>((set, get) => ({
       chatThinking: true,
     }));
     setTimeout(() => {
-      set((s) => ({
-        chatMessages: [
-          ...s.chatMessages,
-          { id: nextId("m"), role: "assistant", text: "The demo agent arrives in a later task." },
-        ],
+      const s = get();
+      const snap = getSnapshotSync();
+      const result = parseIntent(q, {
+        hits: (qq) => searchPlaces(qq, getSearchIndex()),
+        topHex: (prop) => snap?.topHex(prop) ?? null,
+        selected: s.selectedHex && snap ? (snap.byId.get(s.selectedHex) ?? null) : null,
+        months: LA.months,
+      });
+      for (const a of result.actions) {
+        if (a.type === "addLayer") {
+          get().addLayer(a.datasetId, a.metricId);
+          const l = get().layers.find((x) => x.datasetId === a.datasetId);
+          if (l && (a.variant || a.poiCat)) {
+            get().updateLayer(l.id, {
+              ...(a.variant ? { variant: a.variant } : {}),
+              ...(a.poiCat ? { poiCat: a.poiCat as PoiCategory | "all" } : {}),
+            });
+          }
+        } else if (a.type === "removeLayer") {
+          const l = get().layers.find((x) => x.datasetId === a.datasetId);
+          if (l) get().removeLayer(l.id);
+        } else if (a.type === "clearLayers") {
+          set({ layers: [] });
+        } else if (a.type === "goTo") {
+          get().goTo(a.center, a.zoom);
+          if (a.h3) get().selectHex(a.h3);
+        } else if (a.type === "setTime") {
+          get().setTimeIndex(a.index);
+        } else if (a.type === "play") {
+          get().setPlaying(true);
+        }
+      }
+      set((s2) => ({
+        chatMessages: [...s2.chatMessages, { id: nextId("m"), role: "assistant", text: result.reply }],
         chatThinking: false,
       }));
-    }, 500);
+    }, 550);
   },
 
   reset: () => {
